@@ -225,3 +225,22 @@ let get_parts s =
     Lwt.return @@ StringMap.add name parsed_part m
   in
   Lwt_stream.fold_s go s StringMap.empty
+
+let format_multipart_form_data fields (name, file, file_bytes, mime) boundary' =
+  let boundary = {|--|} ^ boundary' in
+  let ending = boundary ^ {|--|}
+  and break = {|\r\n|} in
+  let field_bodies =
+    List.map
+      (fun (name, value) ->
+        boundary ^ break ^
+        {|Content-Disposition: form-data; name="|} ^ name ^ {|"|} ^ break ^ break ^
+        value ^ break)
+      fields
+    |> String.concat in
+  let file_body =
+    boundary ^ break ^
+    {|Content-Disposition: form-data; name="|} ^ name ^ {|"; filename="|} ^ file ^ {|"|} ^ break ^
+    {|Content-Type: |} ^ mime ^ break ^ break ^
+    file_bytes ^ break in
+  field_bodies ^ file_body ^ ending
