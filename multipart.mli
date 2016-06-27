@@ -23,4 +23,8 @@ module StringMap : Map.S with type key = string
 
 val get_parts : stream_part Lwt_stream.t -> [`String of string | `File of file] StringMap.t Lwt.t
 
-val format_multipart_form_data : fields:(string * string) list -> name:string -> filename:string -> filebytes:string -> mimetype:string -> boundary:string -> string
+type part
+
+val make_part : ?content_type:string -> ?name:string -> ?filename:string -> ?value:string -> unit -> part
+val make_header : string -> (string * string) list (* TODO: This type is wrong, fix once in Cohttp *)
+val format_multipart_form_data : parts:part list -> boundary:string -> string

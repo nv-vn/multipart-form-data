@@ -230,21 +230,47 @@ let get_parts s =
   in
   Lwt_stream.fold_s go s StringMap.empty
 
-let format_multipart_form_data ~fields ~name ~filename ~filebytes ~mimetype ~boundary =
+(* Code for outgoing requests, should possibly be put in its own module? *)
+type part = {
+  content_type: string option;
+  name: string option;
+  filename : string option;
+  value : string option
+}
+
+let make_part ?content_type ?name ?filename ?value () =
+  {content_type; name; filename; value}
+
+let make_header boundary =
+(* TODO: What we wrote isn't actually correct... Change to following code once we're in Cohttp:
+   Cohttp.Header.init_with "Content-Type" ("multipart/form-data; boundary=" ^ boundary) *)
+  ["Content-Type", "multipart/form-data; boundary=" ^ boundary]
+
+let format_multipart_form_data ~parts ~boundary =
   let boundary = {|--|} ^ boundary in
   let ending = boundary ^ {|--|}
   and break = {|\r\n|} in
-  let field_bodies =
-    List.map
-      (fun (name, value) ->
+  let bodies =
+    List.map (
+      fun part ->
         boundary ^ break ^
-        {|Content-Disposition: form-data; name="|} ^ name ^ {|"|} ^ break ^ break ^
-        value ^ break)
-      fields
-    |> String.concat "" in
-  let file_body =
-    boundary ^ break ^
-    {|Content-Disposition: form-data; name="|} ^ name ^ {|"; filename="|} ^ filename ^ {|"|} ^ break ^
-    {|Content-Type: |} ^ mimetype ^ break ^ break ^
-    filebytes ^ break in
-  field_bodies ^ file_body ^ ending
+        begin match part.name, part.filename with
+          | Some name, Some filename ->
+            {|Content-Disposition: form-data; name="|} ^ name ^ {|"; filename="|} ^ filename ^ {|"|}
+          | None, Some filename ->
+            {|Content-Disposition: form-data; filename="|} ^ filename ^ {|"|}
+          | Some name, None ->
+            {|Content-Disposition: form-data; name="|} ^ name ^ {|"|}
+          | None, None ->
+            {|Content-Disposition: form-data|}
+        end ^ break ^
+        begin match part.content_type with
+          | Some mime -> {|Content-Type: |} ^ mime
+          | None -> ""
+        end ^ break ^ break ^
+        begin match part.value with
+          | Some body -> body
+          | None -> ""
+        end ^ break
+    ) parts |> String.concat "" in
+  bodies ^ ending
