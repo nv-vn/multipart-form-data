@@ -226,8 +226,8 @@ let get_parts s =
   in
   Lwt_stream.fold_s go s StringMap.empty
 
-let format_multipart_form_data fields (name, file, file_bytes, mime) boundary' =
-  let boundary = {|--|} ^ boundary' in
+let format_multipart_form_data ~fields ~name ~filename ~filebytes ~mimetype ~boundary =
+  let boundary = {|--|} ^ boundary in
   let ending = boundary ^ {|--|}
   and break = {|\r\n|} in
   let field_bodies =
@@ -237,10 +237,10 @@ let format_multipart_form_data fields (name, file, file_bytes, mime) boundary' =
         {|Content-Disposition: form-data; name="|} ^ name ^ {|"|} ^ break ^ break ^
         value ^ break)
       fields
-    |> String.concat in
+    |> String.concat "" in
   let file_body =
     boundary ^ break ^
-    {|Content-Disposition: form-data; name="|} ^ name ^ {|"; filename="|} ^ file ^ {|"|} ^ break ^
-    {|Content-Type: |} ^ mime ^ break ^ break ^
-    file_bytes ^ break in
+    {|Content-Disposition: form-data; name="|} ^ name ^ {|"; filename="|} ^ filename ^ {|"|} ^ break ^
+    {|Content-Type: |} ^ mimetype ^ break ^ break ^
+    filebytes ^ break in
   field_bodies ^ file_body ^ ending

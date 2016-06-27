@@ -22,3 +22,5 @@ val file_stream : file -> string Lwt_stream.t
 module StringMap : Map.S with type key = string
 
 val get_parts : stream_part Lwt_stream.t -> [`String of string | `File of file] StringMap.t Lwt.t
+
+val format_multipart_form_data : fields:(string * string) list -> name:string -> filename:string -> filebytes:string -> mimetype:string -> boundary:string -> string
