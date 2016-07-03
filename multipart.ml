@@ -249,7 +249,7 @@ let make_header boundary =
 let format_multipart_form_data ~parts ~boundary =
   let boundary = {|--|} ^ boundary in
   let ending = boundary ^ {|--|}
-  and break = {|\r\n|} in
+  and break = "\r\n" in
   let bodies =
     List.map (
       fun part ->
@@ -265,9 +265,9 @@ let format_multipart_form_data ~parts ~boundary =
             {|Content-Disposition: form-data|}
         end ^ break ^
         begin match part.content_type with
-          | Some mime -> {|Content-Type: |} ^ mime
+          | Some mime -> {|Content-Type: |} ^ mime ^ break
           | None -> ""
-        end ^ break ^ break ^
+        end ^ break ^
         begin match part.value with
           | Some body -> body
           | None -> ""
