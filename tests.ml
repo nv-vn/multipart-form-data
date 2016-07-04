@@ -1,25 +1,26 @@
 open OUnit2
 
+let body_string =
+  String.concat "\r\n"
+    [ {|--------------------------1605451f456c9a1a|}
+    ; {|Content-Disposition: form-data; name="a"|}
+    ; {||}
+    ; {|b|}
+    ; {|--------------------------1605451f456c9a1a|}
+    ; {|Content-Disposition: form-data; name="c"|}
+    ; {||}
+    ; {|d|}
+    ; {|--------------------------1605451f456c9a1a|}
+    ; {|Content-Disposition: form-data; name="upload"; filename="testfile"|}
+    ; {|Content-Type: application/octet-stream|}
+    ; {||}
+    ; {|testfilecontent|}
+    ; {||}
+    ; {|--------------------------1605451f456c9a1a--|}
+    ]
+
 let test_parse ctxt =
-  let body =
-    String.concat "\r\n"
-      [ {|--------------------------1605451f456c9a1a|}
-      ; {|Content-Disposition: form-data; name="a"|}
-      ; {||}
-      ; {|b|}
-      ; {|--------------------------1605451f456c9a1a|}
-      ; {|Content-Disposition: form-data; name="c"|}
-      ; {||}
-      ; {|d|}
-      ; {|--------------------------1605451f456c9a1a|}
-      ; {|Content-Disposition: form-data; name="upload"; filename="testfile"|}
-      ; {|Content-Type: application/octet-stream|}
-      ; {||}
-      ; {|testfilecontent|}
-      ; {||}
-      ; {|--------------------------1605451f456c9a1a--|}
-      ]
-  in
+  let body = body_string in
   let content_type = "multipart/form-data; boundary=------------------------1605451f456c9a1a" in
   let stream = Lwt_stream.of_list [body] in
   let thread =
@@ -72,10 +73,22 @@ let test_split ctxt =
     Lwt.return_unit
   )
 
+let test_format ctxt =
+  let open Multipart in
+  let parts =
+    [ make_part ~name:"a" ~value:"b" ()
+    ; make_part ~name:"c" ~value:"d" ()
+    ; make_part ~name:"upload" ~filename:"testfile" ~content_type:"application/octet-stream" ~value:"testfilecontent\r\n" ()
+    ]
+  in
+  let text = format_multipart_form_data ~parts ~boundary:"------------------------1605451f456c9a1a" in
+  assert_equal ~ctxt text body_string
+
 let suite =
   "multipart-form-data" >:::
-    [ "parse" >:: test_parse
-    ; "split" >:: test_split
+    [ "parse"  >:: test_parse
+    ; "split"  >:: test_split
+    ; "format" >:: test_format
     ]
 
 let _ = run_test_tt_main suite
